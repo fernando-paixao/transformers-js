@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Transformers.js - Object Detection demo</title>
+</head>
+
+<body>
+    <p id="status"></p>
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0';
+
+// Since we will download the model from the Hugging Face Hub, we can skip the local model check
+env.allowLocalModels = false;
+
+// Reference the elements that we will need
+const status = document.getElementById('status');
+
+// Create a new object detection pipeline
+status.textContent = 'Loading model...';
+var detector = await pipeline('question-answering', 'Xenova/distilbert-base-uncased-distilled-squad');
+//const detector = await pipeline('fill-mask', 'Xenova/bert-base-uncased');
+status.textContent = 'Ready';
+
+// Detect objects in the image
+async function detect() {
+    status.textContent = 'Analysing...';
+    const output = await detector('Who was Jim Henson?', 'Jim Henson was a nice puppet.', {
+        threshold: 0.5,
+        percentage: true,
+    });
+    //status.textContent = output.map((r) => r.sequence).join('<br/>');
+    //status.innerHTML = output.map((r) => r.sequence).join('<br/>');
+    status.innerHTML = output.answer + "Score: "+output.score;
+    console.log(output);
+}
+detect();
+
+    </script>
+</body>
+
+</html>
