@@ -2,7 +2,7 @@ AI on Web using Transformers.js
 
 ## Samples
 
-[Smart Form (using Classifier AI Model)](/samples/basicTransformersSmartForm/index.html)
+[Smart Form (using Classifier AI Model)](/samples/basicTransformersSmartForm)
 
 ## Further information
 
