@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Transformers.js - Object Detection demo</title>
+</head>
+
+<body>
+    <p id="status"></p>
+
+    <form id="contactForm">
+        <label for="nameField">Name:</label>
+        <input type="text" id="nameField" name="nameField">
+        
+        <label for="phoneField">Phone:</label>
+        <input type="tel" id="phoneField" name="phoneField">
+        
+        <label for="emailField">Email:</label>
+        <input type="email" id="emailField" name="emailField">
+    </form>
+    
+    <textarea id="pasteArea" rows="5" style="width:100%">
+Fer@gmail
+Fer
++55 12 12345-1234
+</textarea>
+    <button onclick="callDetect()">Smartpaste</button>
+
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0';
+
+// Since we will download the model from the Hugging Face Hub, we can skip the local model check
+env.allowLocalModels = false;
+
+// Reference the elements that we will need
+const status = document.getElementById('status');
+
+// Create a new object detection pipeline
+status.textContent = 'Loading model...';
+var detector = await pipeline('zero-shot-classification', 'Xenova/nli-deberta-v3-xsmall');
+//const detector = await pipeline('fill-mask', 'Xenova/bert-base-uncased');
+status.textContent = 'Ready';
+
+function callDetect() {
+    let inputText = document.getElementById('pasteArea').value;
+    let lines = inputText.split('\n');
+    for(let i in lines) {
+        if(lines[i].trim() == '') {
+            continue;
+        }
+
+        detect(lines[i]);
+    }
+    //detect(inputText);
+}
+window.callDetect = callDetect;
+/*
+Fer
++55 12 12345-1234
+Fer@gmail
+*/
+
+// Detect objects in the image
+async function detect(inputText) {
+    //let inputText = document.getElementsByTagName(inputName)[0].value;
+    
+    status.textContent = 'Analysing...';
+    //const output = await detector('I have a problem with my iphone that needs to be resolved asap!', 
+    //    [ 'urgent', 'not urgent', 'phone', 'tablet', 'computer' ], {
+    //const output = await detector('+55 12 12345-1234', 
+    //const output = await detector('email@email.com', 
+    const output = await detector(inputText, 
+        [ 'nameField', 'phoneField', 'emailField' ], {
+        multi_label: true,
+    });
+    //status.textContent = output.map((r) => r.sequence).join('<br/>');
+    console.log(output);
+    //console.log(output['labels']);
+    status.innerHTML = '';
+    for(let i = 0; i < output.labels.length; i++) {
+        status.innerHTML += output.labels[i] + ' Score: '+output.scores[i]+'<br/>';
+    }
+
+    let inputName = output.labels[0];
+    document.getElementsByName(inputName)[0].value = inputText;
+}
+//detect();
+
+    </script>
+</body>
+
+</html>
