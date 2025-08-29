@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/list.js/2.3.1/list.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Transformers.js - Object Detection demo</title>
+</head>
+
+<body>
+    <p id="status"></p>
+    <button id="recordButton">Push To Talk</button>
+    
+    <div id="hacker-list">
+        <ul class="list"></ul>
+    </div>
+
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0';
+
+// Since we will download the model from the Hugging Face Hub, we can skip the local model check
+env.allowLocalModels = false;
+
+// Reference the elements that we will need
+const status = document.getElementById('status');
+const recordButton = document.getElementById('recordButton');
+
+// Create a new object detection pipeline
+status.textContent = 'Loading model...';
+var detector = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+//const detector = await pipeline('fill-mask', 'Xenova/bert-base-uncased');
+status.textContent = 'Ready';
+
+// Detect objects in the image
+async function detect(source) {
+    status.textContent = 'Analysing...';
+    //const output = await detector('https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/jfk.wav', {
+        const output = await detector(source, {
+        //chunk_length_s` and/or `stride_length_s
+        chunk_length_s: 30,
+    });
+    //status.textContent = output.map((r) => r.sequence).join('<br/>');
+    console.log(output);
+    status.innerHTML = output.text;
+    hackerList.add( { item: output.text } );
+    saveToLocalStorage(localStorageKey, hackerList);
+}
+//detect('1.mp3');
+
+
+//ai
+let mediaRecorder;
+let audioChunks = [];
+
+recordButton.addEventListener('mousedown', async () => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        
+        mediaRecorder.ondataavailable = (e) => {
+            audioChunks.push(e.data);
+        };
+        
+        mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            await transcribeAudio(audioUrl);
+        };
+        
+        mediaRecorder.start();
+        status.textContent = 'Recording...';
+    } catch (error) {
+        status.textContent = 'Error accessing microphone';
+        console.error(error);
+    }
+});
+
+recordButton.addEventListener('mouseup', () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+});
+
+async function transcribeAudio(audioUrl) {
+    detect(audioUrl);
+
+    /*status.textContent = 'Transcribing...';
+    try {
+        const output = await detector(audioUrl, {
+            chunk_length_s: 30,
+        });
+        console.log(output);
+        status.innerHTML = output.text;
+    } catch (error) {
+        status.textContent = 'Error transcribing audio';
+        console.error(error);
+    }*/
+}
+
+
+//local storage part
+
+function saveToLocalStorage(keyString, dataJsonObject) {
+    try {
+        localStorage.setItem(keyString, JSON.stringify(dataJsonObject));
+        return true;
+    } catch (error) {
+        console.error('Error saving to localStorage:', error);
+        return false;
+    }
+}
+
+function loadFromLocalStorage(keyString) {
+    try {
+        const data = localStorage.getItem(keyString);
+        return data ? JSON.parse(data) : null;
+    } catch (error) {
+        console.error('Error loading from localStorage:', error);
+        return null;
+    }
+}
+
+
+//list part
+
+function removeItem(element) {
+    //element.parentNode.remove();
+    //console.log(element, element.textContent, element.parentNode.querySelector('.item').textContent);
+    var itemValue = element.parentNode.querySelector('.item').textContent;
+    hackerList.remove('item', itemValue);
+    saveToLocalStorage(localStorageKey, hackerList);
+}
+window.removeItem = removeItem;
+
+function updateItem(element) {
+    var itemValue = element.parentNode.querySelector('.item').textContent;
+    var item = hackerList.get('item', itemValue)[0];
+  item.values({
+    item:prompt("New value:", itemValue)
+  });
+  saveToLocalStorage(localStorageKey, hackerList);
+}
+window.updateItem = updateItem;
+
+var options = {
+  //valueNames: [ 'name', 'city' ],
+  //item: '<li><h3 class="name"></h3><p class="city"></p></li>'
+  valueNames: [ 'item' ],
+  item: `
+  <li>
+    <p class="item"></p>
+    <button onclick="updateItem(this);">Update</button>
+    <button onclick="removeItem(this);">Delete</button>
+  </li>`
+};
+
+var localStorageKey = 'hacker-list';
+var values = loadFromLocalStorage(localStorageKey) || [
+  //{ name: 'Jonny', city:'Stockholm' }
+  //, { name: 'Jonas', city:'Berlin' }
+];
+
+var hackerList = new List('hacker-list', options, values);
+
+window.hackerList2 = hackerList;
+
+//hackerList.add( { name: 'Jon', city:'Brasilia' } );
+//hackerList.add( { item: 'Jon' } );
+//hackerList.remove('item', 'Jon');
+
+    </script>
+</body>
+
+</html>
